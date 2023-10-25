@@ -11,15 +11,15 @@
 #include <thread>            // 线程，比如 std::thread
 #include <vector>            // 容器，比如 std::vector
 
-class ThreadPool {                                              // 线程池类【类】
+class ThreadPool {                                              // 线程池【类】
 public:                                                         // 公有成员
   ThreadPool(size_t);                                           // 构造函数声明，size_t是无符号整数
-  template<class F, class... Args>                              // 模板函数声明，用于向线程池中添加任务【模板】
+  template<class F, class... Args>                              // 【模板】函数声明，向线程池中添加任务
   auto enqueue(F &&f, Args &&...args)                           // 参数是一个函数和函数的参数
       -> std::future<typename std::result_of<F(Args...)>::type>;// 返回值是一个 std::future 对象
   ~ThreadPool();                                                // 析构函数声明
 
-private:                                  // 私有成员
+private:                                  // 【私有成员】
   std::vector<std::thread> workers;       // 线程池中的线程列表
   std::queue<std::function<void()>> tasks;// 任务队列
   std::mutex queue_mutex;                 // 互斥量，用于保证线程安全
@@ -42,17 +42,17 @@ inline ThreadPool::ThreadPool(size_t threads)// inline 建议编译器将函数�
           std::unique_lock<std::mutex> lock(this->queue_mutex);// 获取锁
           // 如果线程池没有停止，且任务队列为空，则等待。
           // 线程池仅在析构函数中停止，这里可以简单理解为：如果没有任务就一直等任务。
-          this->condition.wait(lock, [this] {
-            return this->stop || !this->tasks.empty(); // 符合这个条件就往下执行
+          this->condition.wait(lock, [this] {         // 【lambda】
+            return this->stop || !this->tasks.empty();// 符合这个条件就往下执行
           });
           // 线程池停止，且任务队列为空，退出线程
           if (this->stop && this->tasks.empty()) {
             return;// 退出for循环，线程结束
           }
-          task = std::move(this->tasks.front());// 找到任务队列中最前面的任务
+          task = std::move(this->tasks.front());// 找到任务队列中最前面的任务【move】
           this->tasks.pop();                    // 从任务队列中移除这个任务
-        } // 在这个反括号这里会自动释放锁
-        task();// 执行任务
+        }                                       // 在这个反括号这里会自动释放锁
+        task();                                 // 执行任务
       }
     };
     workers.emplace_back(threadLambda);// 将线程放入线程列表
@@ -79,7 +79,7 @@ auto ThreadPool::enqueue(F &&f, Args &&...args)
   auto callableBind = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
 
   // std::packaged_task<return_type()>：包装一个可调用对象，可以异步获取结果，结果的类型是return_type
-  // std::make_shared用于创建一个智能指针shared_ptr，指向一个新创建的packaged_task对象。
+  // std::make_shared用于创建一个智能指针shared_ptr，指向一个新创建的packaged_task对象。【智能指针】
   // task的类型：std::shared_ptr<std::packaged_task<int()> >
   auto task = std::make_shared<std::packaged_task<return_type()>>(callableBind);
 
@@ -100,7 +100,7 @@ auto ThreadPool::enqueue(F &&f, Args &&...args)
     };
     // 将这个函数放入任务队列
     tasks.emplace(taskFunction);
-  } // 在这个反括号这里会自动释放锁
+  }// 在这个反括号这里会自动释放锁
   condition.notify_one();
   return res;
 }
@@ -113,7 +113,7 @@ inline ThreadPool::~ThreadPool() {
   {
     std::unique_lock<std::mutex> lock(queue_mutex);
     stop = true;
-  } // 在这个反括号这里会自动释放锁
+  }// 在这个反括号这里会自动释放锁
   condition.notify_all();
   for (std::thread &worker: workers) {
     worker.join();
